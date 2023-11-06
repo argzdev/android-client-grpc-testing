@@ -1,5 +1,8 @@
 # android-client-grpc-testing
 
+### Summary
+- This repository is an android client project that connects to a gRPC server with the given IP address and port. The button press sends a simple Message with header to the server and displays the message received from the server.
+
 Modified template from
 [quick start]: https://grpc.io/docs/languages/go/quickstart
 
