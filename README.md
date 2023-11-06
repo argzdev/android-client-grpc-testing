@@ -14,7 +14,7 @@ Follow these setup to run the example:
 
       * From the command line:
 
-        1. `./gradlew :android:installDebug -PserverUrl=http://YOUR_MACHINE_IP:50051/`
+        1. `./gradlew :app:installDebug -PserverUrl=http://YOUR_MACHINE_IP:50051/`
 
       OR
       
