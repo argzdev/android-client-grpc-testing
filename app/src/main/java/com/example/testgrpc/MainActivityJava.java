@@ -35,6 +35,8 @@ public class MainActivityJava extends ComponentActivity {
         String name = ((EditText) findViewById(R.id.et_name)).getText().toString();
         TextView result = ((TextView) findViewById(R.id.tv_result));
 
+        FirebaseAuth.getInstance().signInAnonymously();
+
         greeterService.sayHello(name, result);
     }
 
@@ -55,28 +57,25 @@ public class MainActivityJava extends ComponentActivity {
             greeterJava = GreeterGrpc.newBlockingStub(channel);
         }
 
-        public void sayHello(String name, TextView view){
-            FirebaseAuth.getInstance().signInAnonymously().addOnCompleteListener(signInTask -> {
-                if (!signInTask.isSuccessful()) return;
+        public void sayHello(String name, TextView view) {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            user.getIdToken(false).addOnCompleteListener(idTask -> {
+                if (!idTask.isSuccessful()) return;
 
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                user.getIdToken(false).addOnCompleteListener(idTask -> {
-                    if(!idTask.isSuccessful()) return;
+                Metadata headers = new Metadata();
+                headers.put(
+                    Metadata.Key.of("custom_client_header_key", Metadata.ASCII_STRING_MARSHALLER),
+                    idTask.getResult().getToken()
+                );
 
-                    Metadata headers = new Metadata();
-                    headers.put(
-                        Metadata.Key.of("custom_client_header_key", Metadata.ASCII_STRING_MARSHALLER),
-                        idTask.getResult().getToken()
-                    );
-
-                    try {
-                        HelloRequest request = HelloRequest.newBuilder().setName(name).build();
-                        HelloReply response = greeterJava.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers)).sayHello(request);
-                        view.setText(response.getMessage());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                try {
+                    HelloRequest request = HelloRequest.newBuilder().setName(name).build();
+                    HelloReply response = greeterJava.withInterceptors(
+                            MetadataUtils.newAttachHeadersInterceptor(headers)).sayHello(request);
+                    view.setText(response.getMessage());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             });
         }
 

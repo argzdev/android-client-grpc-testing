@@ -25,6 +25,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import io.grpc.Channel
+import io.grpc.ClientInterceptor
+import io.grpc.ClientInterceptors
+import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.Metadata
 import io.grpc.stub.MetadataUtils
@@ -57,7 +61,7 @@ class MainActivityKotlin : ComponentActivity() {
 
 class GreeterRCP(uri: Uri) : Closeable {
     val responseState = mutableStateOf("")
-    private val channel = let {
+    private val originChannel = let {
         println("Connecting to ${uri.host}:${uri.port}")
 
         val builder = ManagedChannelBuilder.forAddress(uri.host, uri.port)
@@ -69,12 +73,25 @@ class GreeterRCP(uri: Uri) : Closeable {
 
         builder.executor(Dispatchers.IO.asExecutor()).build()
     }
-    private val greeterKt = GreeterGrpcKt.GreeterCoroutineStub(channel)
+
+    /***
+     * Option A
+     * Insert Auth token from the ClientInterceptor
+     */
+//    private val interceptor: ClientInterceptor = HeaderClientInterceptor()
+//    private val channel: Channel = ClientInterceptors.intercept(originChannel, interceptor)
+//    private val greeterKt = GreeterGrpcKt.GreeterCoroutineStub(channel)
+    private val greeterKt = GreeterGrpcKt.GreeterCoroutineStub(originChannel)
 
     suspend fun sayHello(name: String) {
         Firebase.auth.signInAnonymously().await()
         val authToken = Firebase.auth.currentUser?.getIdToken(false)?.await()?.token ?: ""
 
+
+        /***
+         * Option B
+         * Insert Auth token directly into the generated gRPC stub
+         */
         val headers = Metadata()
         headers.put(
             Metadata.Key.of("custom_client_header_key", Metadata.ASCII_STRING_MARSHALLER),
@@ -92,7 +109,8 @@ class GreeterRCP(uri: Uri) : Closeable {
     }
 
     override fun close() {
-        channel.shutdownNow()
+//        (channel as ManagedChannel).shutdownNow()
+        originChannel.shutdownNow()
     }
 }
 
